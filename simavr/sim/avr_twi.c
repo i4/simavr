@@ -117,10 +117,13 @@ _avr_twi_delay_state(
 		int twi_cycles,
 		uint8_t state)
 {
-	p->next_twstate = state;
-	// TODO: calculate clock rate, convert to cycles, and use that
-	avr_cycle_timer_register_usec(
-			p->io.avr, twi_cycles, avr_twi_set_state_timer, p);
+	if (twi_cycles == 0) {
+		_avr_twi_status_set(p, state, 1);
+	} else {
+		p->next_twstate = state;
+		avr_cycle_timer_register_usec(
+				p->io.avr, twi_cycles, avr_twi_set_state_timer, p);
+	}
 }
 
 static void
@@ -135,7 +138,6 @@ avr_twi_write(
 	uint8_t twen = avr_regbit_get(avr, p->twen);
 	uint8_t twsta = avr_regbit_get(avr, p->twsta);
 	uint8_t twsto = avr_regbit_get(avr, p->twsto);
-	uint8_t twint = avr_regbit_get(avr, p->twi.raised);
 
 	avr_core_watch_write(avr, addr, v);
 #if AVR_TWI_DEBUG
@@ -168,11 +170,9 @@ avr_twi_write(
 	if (!twen)
 		return;
 
-	uint8_t cleared = avr_regbit_get(avr, p->twi.raised);
-
+	uint8_t cleared = avr_regbit_clear(avr, p->twi.raised);
 	/*int cleared = */
-	avr_clear_interrupt_if(avr, &p->twi, twint);
-//	AVR_TRACE(avr, "cleared %d\n", cleared);
+	avr_clear_interrupt_if(avr, &p->twi, 0);
 
 	if (!twsto && avr_regbit_get(avr, p->twsto)) {
 		// generate a stop condition
@@ -308,19 +308,18 @@ avr_twi_write(
 				_avr_twi_delay_state(p, 9,
 						p->state & TWI_COND_ACK ?
 								TWI_MRX_ADR_ACK : TWI_MRX_ADR_NACK);
-			} else {
-				if(p->state & TWI_COND_ADDR){
+			} else if (p->state & TWI_COND_WRITE) {
+				if (p->state & TWI_COND_ADDR) {
 					_avr_twi_delay_state(p, 9,
 							p->state & TWI_COND_ACK ?
 									TWI_MTX_ADR_ACK : TWI_MTX_ADR_NACK);
-				}
-				if(p->state & TWI_COND_WRITE){
+				} else {
 					_avr_twi_delay_state(p, 0,
 							p->state & TWI_COND_ACK ?
 									TWI_MTX_DATA_ACK : TWI_MTX_DATA_NACK);
-				}else{
-					_avr_twi_delay_state(p, 9, TWI_ARB_LOST);
 				}
+			} else {
+				_avr_twi_delay_state(p, 0, TWI_ARB_LOST);
 			}
 		}
 		p->state &= ~TWI_COND_WRITE;
