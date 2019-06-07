@@ -504,6 +504,7 @@ const struct mcu_t {
 		},
 	},
 	.twi0 = {
+		.name = '0',
 		.disabled = AVR_IO_REGBIT(PRR0,PRTWI0),
 
 		.r_twcr = TWCR0,
@@ -530,6 +531,7 @@ const struct mcu_t {
 		},
 	},
 	.twi1 = {
+		.name = '1',
 		.disabled = AVR_IO_REGBIT(PRR1,PRTWI1),
 
 		.r_twcr = TWCR1,
