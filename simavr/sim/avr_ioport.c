@@ -154,7 +154,8 @@ avr_ioport_irq_notify(
 	if (p->r_pcint) {
 		// if the pcint bit is on, try to raise it
 		int raise = avr->data[p->r_pcint] & mask;
-		if (raise)
+		int ddr = avr->data[p->r_ddr] & mask;
+		if (raise && ddr)
 			avr_raise_interrupt(avr, &p->pcint);
 	}
 }
@@ -279,4 +280,3 @@ void avr_ioport_init(avr_t * avr, avr_ioport_t * p)
 	avr_register_io_write(avr, p->r_pin, avr_ioport_pin_write, p);
 	avr_register_io_write(avr, p->r_ddr, avr_ioport_ddr_write, p);
 }
-
