@@ -934,6 +934,13 @@ run_one_again:
 					 * details, see the commit message. */
 					if (!avr_has_pending_interrupts(avr) || !avr->sreg[S_I])
 						avr->state = cpu_Sleeping;
+					/* Assure execution of a loop executing
+					 *    sei
+					 *    sleep
+					 *    cli
+					 */
+					else if (avr->interrupt_state)
+						avr_service_interrupts(avr);
 				}	break;
 				case 0x9598: { // BREAK -- 1001 0101 1001 1000
 					STATE("break\n");
